@@ -174,14 +174,22 @@ if analyze_button:
     
     # Configure columns for better display
     column_config = {
-        "title": "Paper Title",
+        "title": st.column_config.TextColumn(
+            "Paper Title",
+            help="Title of the research paper",
+            width="large"
+        ),
         "published": st.column_config.DatetimeColumn(
             "Publication Date",
-            format="DD/MM/YYYY"
+            format="DD/MM/YYYY",
+            width="medium"
         ),
         "url": st.column_config.LinkColumn(
             "Paper Link",
-            help="Click to view the original paper"
+            help="Click to view the original paper",
+            display_text="View Paper",
+            width="small",
+            validate="url"
         )
     }
     
@@ -207,23 +215,26 @@ if analyze_button:
         column_config=column_config,
         hide_index=True,
         num_rows="dynamic",
-        key="paper_table"
+        key="paper_table",
+        disabled=False,
+        on_change=lambda: None,
+        args=(),
+        kwargs={},
     )
 
     # Add detailed error analysis section
     st.subheader("Detailed Error Analysis")
     st.info("Click on a paper in the table above to see detailed error analysis")
 
-    # Initialize session state for selection if not exists
-    if 'selected_paper_index' not in st.session_state:
-        st.session_state.selected_paper_index = None
-
-    # Get selected rows and update session state
-    selected_rows = st.session_state.paper_table.get("selected_rows", [])
-    if selected_rows:
-        # Update the selected index based on the selected row
-        selected_paper_index = selected_rows[0]
-        st.session_state.selected_paper_index = selected_paper_index
+    # Get selected rows from the editor
+    selected_indices = st.session_state.paper_table.get("selected_rows", [])
+    
+    # If we have a selection, update the session state
+    if selected_indices:
+        selected_index = display_df.index[selected_indices[0]]
+        if 'selected_paper_index' not in st.session_state or st.session_state.selected_paper_index != selected_index:
+            st.session_state.selected_paper_index = selected_index
+            st.experimental_rerun()
     
     # Display detailed error analysis for selected paper
     if st.session_state.selected_paper_index is not None:
