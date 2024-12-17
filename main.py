@@ -214,13 +214,20 @@ if analyze_button:
     st.subheader("Detailed Error Analysis")
     st.info("Click on a paper in the table above to see detailed error analysis")
 
-    # Get selected rows through session state
-    selected_indices = st.session_state.paper_table["selected_rows"]
+    # Initialize session state for selection if not exists
+    if 'selected_paper_index' not in st.session_state:
+        st.session_state.selected_paper_index = None
+
+    # Get selected rows and update session state
+    selected_rows = st.session_state.paper_table.get("selected_rows", [])
+    if selected_rows:
+        # Update the selected index based on the selected row
+        selected_paper_index = selected_rows[0]
+        st.session_state.selected_paper_index = selected_paper_index
     
     # Display detailed error analysis for selected paper
-    if selected_indices and len(selected_indices) > 0:
-        selected_index = selected_indices[0]
-        selected_paper = papers[selected_index]
+    if st.session_state.selected_paper_index is not None:
+        selected_paper = papers[st.session_state.selected_paper_index]
         analysis = analyzer.analyze_paper(selected_paper)
         
         for category in analyzer.error_categories:
