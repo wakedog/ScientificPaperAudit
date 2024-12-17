@@ -240,7 +240,7 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    selected_indices = st.data_editor(
+    edited_df = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
@@ -249,19 +249,23 @@ if analyze_button:
         key="paper_analysis_table",
         disabled=["url"] + [col for col in display_df.columns if col not in ["title", "url"]],
         column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url", "categories"]],
-        height=400,
-        on_change=lambda: None,
-        selection_mode="single"
+        height=400
     )
 
+    # Get selected rows from the editor's return value
+    if st.session_state.paper_analysis_table and 'edited_rows' in st.session_state.paper_analysis_table:
+        selected_indices = list(st.session_state.paper_analysis_table['edited_rows'].keys())
+
     # Handle paper selection
-    if len(selected_indices) > 0:
-        selected_index = selected_indices[0]
-        selected_paper_title = display_df.iloc[selected_index]["title"]
-        selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
-        
-        if selected_paper:
-            st.session_state.selected_paper_index = papers.index(selected_paper)
+    if 'paper_analysis_table' in st.session_state and 'edited_rows' in st.session_state.paper_analysis_table:
+        selected_indices = list(st.session_state.paper_analysis_table['edited_rows'].keys())
+        if selected_indices:
+            selected_index = selected_indices[0]
+            selected_paper_title = display_df.iloc[selected_index]["title"]
+            selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
+            
+            if selected_paper:
+                st.session_state.selected_paper_index = papers.index(selected_paper)
     
     # Display detailed error analysis for selected paper
     if st.session_state.selected_paper_index is not None:
