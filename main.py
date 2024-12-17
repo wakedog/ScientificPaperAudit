@@ -201,11 +201,12 @@ if analyze_button:
         )
     
     # Display the dataframe with configured columns
-    selected_rows = st.dataframe(
+    selected_rows = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
-        hide_index=True
+        hide_index=True,
+        num_rows="dynamic"
     )
 
     # Add detailed error analysis section
@@ -213,8 +214,9 @@ if analyze_button:
     st.info("Click on a paper in the table above to see detailed error analysis")
 
     # Display detailed error analysis for selected paper
-    if selected_rows:
-        selected_paper = papers[list(selected_rows)[0]]
+    if selected_rows is not None and len(selected_rows.selected_rows) > 0:
+        row_index = selected_rows.selected_rows[0]
+        selected_paper = papers[row_index]
         analysis = analyzer.analyze_paper(selected_paper)
         
         for category in analyzer.error_categories:
