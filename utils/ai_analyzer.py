@@ -21,8 +21,8 @@ class PaperAnalyzer:
             prompt = self._generate_analysis_prompt(paper)
             
             # Make API call to Perplexity
-            response = pplx.chat(
-                api_key=os.getenv('PPLX_API_KEY'),
+            client = pplx.Client(api_key=os.getenv('PPLX_API_KEY'))
+            response = client.chat.completions.create(
                 model="pplx-70b-online",
                 messages=[{
                     "role": "system",

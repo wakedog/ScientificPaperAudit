@@ -43,7 +43,10 @@ class PaperFetcher:
                     })
                 
                 papers.extend(batch_papers)
-                print(f"Successfully fetched {len(batch_papers)} papers from {category}")
+                if topic:
+                    print(f"Successfully fetched {len(batch_papers)} papers for topic: {topic}")
+                else:
+                    print(f"Successfully fetched {len(batch_papers)} papers from category: {query}")
                 
             except Exception as e:
                 print(f"Error fetching papers: {str(e)}")
