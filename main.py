@@ -74,8 +74,40 @@ if analyze_button:
     
     # Detailed results table
     st.subheader("Detailed Results")
+    
+    # Prepare display dataframe
+    display_df = analysis_results.copy()
+    
+    # Configure columns for better display
+    column_config = {
+        "title": "Paper Title",
+        "published": st.column_config.DatetimeColumn(
+            "Publication Date",
+            format="DD/MM/YYYY"
+        )
+    }
+    
+    # Configure confidence and issues columns
+    for category in analyzer.error_categories:
+        conf_col = f"{category}_confidence"
+        issues_col = f"{category}_issues"
+        
+        column_config[conf_col] = st.column_config.NumberColumn(
+            f"{category} Confidence",
+            help=f"Confidence score for {category}",
+            format="%.1f%%"
+        )
+        column_config[issues_col] = st.column_config.NumberColumn(
+            f"{category} Issues",
+            help=f"Number of issues found in {category}"
+        )
+    
+    # Display the dataframe with configured columns
     st.dataframe(
-        analysis_results.style.background_gradient(subset=[col for col in analysis_results.columns if 'confidence' in col])
+        display_df,
+        use_container_width=True,
+        column_config=column_config,
+        hide_index=True
     )
     
     # Export functionality
