@@ -176,10 +176,22 @@ if analyze_button:
     # Add paper URLs to display dataframe
     display_df['url'] = papers_df['url'].apply(lambda x: x if isinstance(x, str) else '')
     
-    # Ensure URLs are valid
-    display_df['url'] = display_df['url'].apply(
-        lambda x: x if x.startswith('http') else f'https://arxiv.org/abs/{x.split("/")[-1]}' if x else ''
-    )
+    # Ensure URLs are valid strings and properly formatted
+    def format_paper_url(url):
+        if pd.isna(url) or not url:
+            return ''
+        url_str = str(url).strip()
+        if not url_str:
+            return ''
+        if url_str.startswith('http'):
+            return url_str
+        try:
+            paper_id = url_str.split('/')[-1]
+            return f'https://arxiv.org/abs/{paper_id}'
+        except:
+            return ''
+            
+    display_df['url'] = display_df['url'].apply(format_paper_url)
     
     # Configure columns for better display
     column_config = {
@@ -223,7 +235,7 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    selection = st.data_editor(
+    st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
@@ -231,9 +243,8 @@ if analyze_button:
         num_rows="dynamic",
         key="paper_analysis_table",
         disabled=True,
-        column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url"]],
-        height=400,
-        on_change=lambda: None,  # Add empty on_change to enable selection
+        column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url", "categories"]],
+        height=400
     )
 
     # Handle paper selection using selected_rows
