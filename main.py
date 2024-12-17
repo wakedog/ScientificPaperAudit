@@ -191,10 +191,10 @@ if analyze_button:
         "url": st.column_config.LinkColumn(
             "Paper Link",
             help="Click to view the original paper",
-            max_chars=200,
+            validate="^https?://.*",
+            max_chars=None,
             display_text="View Paper ↗",
-            width="small",
-            required=True
+            width="small"
         )
     }
     
@@ -218,22 +218,22 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    st.data_editor(
+    edited_df = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True,
         num_rows="dynamic",
         key="paper_analysis_table",
-        disabled=False,
+        disabled=True,
         column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url"]],
         height=400,
-        on_change=lambda: None,
     )
 
     # Handle paper selection using click events
-    if st.session_state.get("paper_analysis_table_last_clicked_row") is not None:
-        selected_index = st.session_state.paper_analysis_table_last_clicked_row
+    selected_rows = st.session_state.paper_analysis_table.get("selected_rows", [])
+    if selected_rows:
+        selected_index = selected_rows[0]
         selected_paper_title = display_df.iloc[selected_index]["title"]
         selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
         
