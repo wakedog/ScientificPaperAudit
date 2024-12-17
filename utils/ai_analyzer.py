@@ -10,33 +10,63 @@ class PaperAnalyzer:
             "Statistical Errors",
             "Logical Inconsistencies",
             "Citation Problems",
-            "Data Interpretation Issues"
+            "Data Interpretation Issues",
+            "Reproducibility Concerns",
+            "Technical Implementation",
+            "Experimental Design"
         ]
+        self.pattern_indicators = {
+            "Methodology Issues": ["unclear procedures", "missing controls", "inconsistent methods"],
+            "Statistical Errors": ["p-hacking", "small sample size", "incorrect tests"],
+            "Logical Inconsistencies": ["contradictory statements", "unsupported conclusions"],
+            "Citation Problems": ["missing citations", "outdated references"],
+            "Data Interpretation Issues": ["overstatement", "cherry picking", "confirmation bias"],
+            "Reproducibility Concerns": ["missing code", "unclear parameters", "undefined conditions"],
+            "Technical Implementation": ["algorithmic errors", "computational limitations"],
+            "Experimental Design": ["poor controls", "confounding variables", "selection bias"]
+        }
         # Initialize Perplexity client with API key
         pplx.api_key = os.environ.get("PPLX_API_KEY")
         
     def analyze_paper(self, paper: Dict) -> Dict:
         """Analyze a single paper using Perplexity AI."""
         prompt = f"""
-        As a scientific paper reviewer, analyze this paper for potential errors and inconsistencies.
+        As an expert scientific paper reviewer, perform a detailed analysis of this paper:
         
         Title: {paper['title']}
         Abstract: {paper['abstract']}
         
-        For each category below:
-        1. Identify specific issues (if any)
-        2. Assign a confidence score (0-100) based on the reliability of the analysis
-        3. Count the number of distinct issues found
+        For each category, analyze the following aspects:
+        1. Identify specific issues by checking for these indicators:
+           {self.pattern_indicators}
         
-        Categories:
-        - Methodology Issues
-        - Statistical Errors
-        - Logical Inconsistencies
-        - Citation Problems
-        - Data Interpretation Issues
+        2. For each identified issue:
+           - Provide a brief description
+           - Rate severity (1-5)
+           - Assign confidence score (0-100)
         
-        Format your response as a JSON object with this structure for each category:
-        {{"category_name": {{"confidence": 0-100, "issues": number_of_issues}}}}
+        3. Consider these specific aspects:
+           - Methodology: Clarity, reproducibility, and rigor
+           - Statistics: Appropriate tests, sample sizes, and significance
+           - Logic: Flow of arguments and validity of conclusions
+           - Citations: Proper attribution and relevance
+           - Data Interpretation: Objectivity and completeness
+           - Reproducibility: Methods clarity and implementation details
+           - Technical: Algorithm correctness and computational aspects
+           - Design: Control groups and variable handling
+        
+        Format response as JSON:
+        {{
+            "category_name": {{
+                "confidence": 0-100,
+                "issues": number_of_issues,
+                "details": [{{
+                    "description": "issue description",
+                    "severity": 1-5,
+                    "indicators": ["matched_indicators"]
+                }}]
+            }}
+        }}
         """
         
         try:
@@ -83,6 +113,33 @@ class PaperAnalyzer:
         except Exception as e:
             print(f"Error calling Perplexity API: {e}")
             return self._generate_fallback_analysis()
+            
+    def aggregate_patterns(self, results: pd.DataFrame) -> Dict:
+        """Aggregate and analyze error patterns across papers."""
+        pattern_stats = {
+            'common_issues': {},
+            'severity_distribution': {},
+            'confidence_trends': {}
+        }
+        
+        # Analyze each category
+        for category in self.error_categories:
+            confidence_col = f"{category}_confidence"
+            issues_col = f"{category}_issues"
+            
+            pattern_stats['confidence_trends'][category] = {
+                'mean': results[confidence_col].mean(),
+                'std': results[confidence_col].std(),
+                'median': results[confidence_col].median()
+            }
+            
+            pattern_stats['severity_distribution'][category] = {
+                'low': len(results[results[issues_col] <= 1]),
+                'medium': len(results[(results[issues_col] > 1) & (results[issues_col] <= 3)]),
+                'high': len(results[results[issues_col] > 3])
+            }
+        
+        return pattern_stats
             
     def _generate_fallback_analysis(self) -> Dict:
         """Generate fallback analysis when API call fails."""
