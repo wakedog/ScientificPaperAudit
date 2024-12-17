@@ -1,119 +1,103 @@
-from typing import Dict, List
-import pplx
-import pandas as pd
 import os
+import json
+from typing import List, Dict
+import pandas as pd
+from pplx import Client
 
 class PaperAnalyzer:
     def __init__(self):
         self.error_categories = [
-            "Methodology Issues",
-            "Statistical Errors",
-            "Logical Inconsistencies",
-            "Citation Problems",
-            "Data Interpretation Issues",
-            "Reproducibility Concerns",
-            "Technical Implementation",
-            "Experimental Design"
+            "Methodology",
+            "Statistical Analysis",
+            "Data Integrity",
+            "Citation Issues",
+            "Technical Accuracy"
         ]
-        self.pattern_indicators = {
-            "Methodology Issues": ["unclear procedures", "missing controls", "inconsistent methods"],
-            "Statistical Errors": ["p-hacking", "small sample size", "incorrect tests"],
-            "Logical Inconsistencies": ["contradictory statements", "unsupported conclusions"],
-            "Citation Problems": ["missing citations", "outdated references"],
-            "Data Interpretation Issues": ["overstatement", "cherry picking", "confirmation bias"],
-            "Reproducibility Concerns": ["missing code", "unclear parameters", "undefined conditions"],
-            "Technical Implementation": ["algorithmic errors", "computational limitations"],
-            "Experimental Design": ["poor controls", "confounding variables", "selection bias"]
-        }
-        # Initialize Perplexity client with API key
-        pplx.api_key = os.environ.get("PPLX_API_KEY")
+        self.client = Client(api_key=os.getenv('PPLX_API_KEY'))
         
     def analyze_paper(self, paper: Dict) -> Dict:
-        """Analyze a single paper using Perplexity AI."""
-        prompt = f"""
-        As an expert scientific paper reviewer, perform a detailed analysis of this paper:
-        
-        Title: {paper['title']}
-        Abstract: {paper['abstract']}
-        
-        For each category, analyze the following aspects:
-        1. Identify specific issues by checking for these indicators:
-           {self.pattern_indicators}
-        
-        2. For each identified issue:
-           - Provide a brief description
-           - Rate severity (1-5)
-           - Assign confidence score (0-100)
-        
-        3. Consider these specific aspects:
-           - Methodology: Clarity, reproducibility, and rigor
-           - Statistics: Appropriate tests, sample sizes, and significance
-           - Logic: Flow of arguments and validity of conclusions
-           - Citations: Proper attribution and relevance
-           - Data Interpretation: Objectivity and completeness
-           - Reproducibility: Methods clarity and implementation details
-           - Technical: Algorithm correctness and computational aspects
-           - Design: Control groups and variable handling
-        
-        Format response as JSON:
-        {{
-            "category_name": {{
-                "confidence": 0-100,
-                "issues": number_of_issues,
-                "details": [{{
-                    "description": "issue description",
-                    "severity": 1-5,
-                    "indicators": ["matched_indicators"]
-                }}]
-            }}
-        }}
-        """
-        
+        """Analyze a single paper for potential issues."""
         try:
-            response = pplx.chat.completions.create(
+            # Create a detailed analysis prompt
+            prompt = self._generate_analysis_prompt(paper)
+            
+            # Make API call to Perplexity
+            response = self.client.chat.completions.create(
                 model="pplx-70b-online",
                 messages=[{
                     "role": "system",
-                    "content": "You are a scientific paper reviewer analyzing papers for errors and inconsistencies."
+                    "content": "You are an expert scientific paper analyzer. Analyze the paper for potential issues and provide structured feedback."
                 }, {
                     "role": "user",
                     "content": prompt
                 }],
-                max_tokens=1000,
                 temperature=0.7
             )
             
-            # Parse the response to extract analysis
-            import json
-            try:
-                analysis_text = response.choices[0].message.content
-                # Extract the JSON part from the response
-                start_idx = analysis_text.find('{')
-                end_idx = analysis_text.rfind('}') + 1
-                if start_idx >= 0 and end_idx > start_idx:
-                    analysis_json = json.loads(analysis_text[start_idx:end_idx])
-                else:
-                    raise ValueError("No valid JSON found in response")
-                
-                # Ensure all categories are present
-                analysis = {}
-                for category in self.error_categories:
-                    category_key = category.replace(' ', '_').lower()
-                    if category_key in analysis_json:
-                        analysis[category] = analysis_json[category_key]
-                    else:
-                        analysis[category] = {'confidence': 70, 'issues': 0}
-                
-                return analysis
-                
-            except (json.JSONDecodeError, KeyError, IndexError) as e:
-                print(f"Error parsing AI response: {e}")
-                return self._generate_fallback_analysis()
-                
+            # Parse the response
+            return self._parse_analysis_response(response.choices[0].message.content)
+            
         except Exception as e:
             print(f"Error calling Perplexity API: {e}")
             return self._generate_fallback_analysis()
+
+    def _generate_analysis_prompt(self, paper: Dict) -> str:
+        """Generate detailed analysis prompt for the paper."""
+        return f"""
+        Please analyze this scientific paper for potential issues and provide a structured analysis:
+        
+        PAPER DETAILS:
+        Title: {paper['title']}
+        Abstract: {paper['abstract']}
+        Authors: {paper['authors']}
+        Published: {paper['published']}
+        
+        For each of the following categories:
+        - Methodology
+        - Statistical Analysis
+        - Data Integrity
+        - Citation Issues
+        - Technical Accuracy
+        
+        Provide:
+        1. A confidence score (0-100)
+        2. Number of potential issues identified
+        3. Brief description of main concerns
+        
+        Format your response as a JSON object with this structure for each category:
+        {
+            "category_name": {
+                "confidence": score,
+                "issues": count,
+                "concerns": ["concern1", "concern2"]
+            }
+        }
+        """
+        
+    def _parse_analysis_response(self, response_text: str) -> Dict:
+        """Parse API response into structured analysis."""
+        try:
+            # Try to parse the response as JSON
+            analysis = json.loads(response_text)
             
+            # Normalize the response to match expected format
+            normalized = {}
+            for category in self.error_categories:
+                category_key = category.lower().replace(' ', '_')
+                if category_key in analysis:
+                    normalized[category] = {
+                        'confidence': min(100, max(0, analysis[category_key]['confidence'])),
+                        'issues': max(0, analysis[category_key]['issues'])
+                    }
+                else:
+                    normalized[category] = self._generate_fallback_analysis()[category]
+                    
+            return normalized
+            
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Error parsing API response: {e}")
+            return self._generate_fallback_analysis()
+
     def aggregate_patterns(self, results: pd.DataFrame) -> Dict:
         """Aggregate and analyze error patterns across papers."""
         pattern_stats = {
@@ -163,7 +147,7 @@ class PaperAnalyzer:
             }
             for category, data in analysis.items():
                 result[f"{category}_confidence"] = data['confidence']
-                result[f"{category}_issues"] = data['issues']
+                result[f"{category}_issues"] = len(data['issues']) # Changed to reflect number of issues
             results.append(result)
         
         return pd.DataFrame(results)
