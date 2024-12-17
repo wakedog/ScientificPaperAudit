@@ -12,15 +12,6 @@ class PaperAnalyzer:
             "Citation Problems",
             "Data Interpretation Issues"
         ]
-
-    def __init__(self):
-        self.error_categories = [
-            "Methodology Issues",
-            "Statistical Errors",
-            "Logical Inconsistencies",
-            "Citation Problems",
-            "Data Interpretation Issues"
-        ]
         # Initialize Perplexity client with API key
         pplx.api_key = os.environ.get("PPLX_API_KEY")
         
@@ -49,17 +40,23 @@ class PaperAnalyzer:
         """
         
         try:
-            response = pplx.Completion.create(
+            response = pplx.chat.completions.create(
                 model="pplx-70b-online",
-                prompt=prompt,
+                messages=[{
+                    "role": "system",
+                    "content": "You are a scientific paper reviewer analyzing papers for errors and inconsistencies."
+                }, {
+                    "role": "user",
+                    "content": prompt
+                }],
                 max_tokens=1000,
-                temperature=0.7,
+                temperature=0.7
             )
             
             # Parse the response to extract analysis
             import json
             try:
-                analysis_text = response.choices[0].text
+                analysis_text = response.choices[0].message.content
                 # Extract the JSON part from the response
                 start_idx = analysis_text.find('{')
                 end_idx = analysis_text.rfind('}') + 1
