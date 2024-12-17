@@ -8,8 +8,8 @@ class PaperFetcher:
     def __init__(self):
         self.client = arxiv.Client()
 
-    def fetch_random_papers(self, count: int = 1000) -> List[Dict]:
-        """Fetch random papers from arXiv with improved error handling."""
+    def fetch_papers(self, count: int = 1000, topic: str = None) -> List[Dict]:
+        """Fetch papers from arXiv based on topic or randomly if no topic provided."""
         papers = []
         batch_size = 50  # Smaller batch size for better reliability
         max_retries = 3
@@ -17,12 +17,18 @@ class PaperFetcher:
         
         while len(papers) < count and max_retries > 0:
             try:
-                # Randomly select a category for diversity
-                category = random.choice(categories)
+                if topic:
+                    # Search by topic across all categories
+                    query = f"all:{topic}"
+                else:
+                    # Randomly select a category for diversity
+                    category = random.choice(categories)
+                    query = f"cat:{category}.*"
+                
                 search = arxiv.Search(
-                    query=f"cat:{category}.*",
+                    query=query,
                     max_results=batch_size,
-                    sort_by=arxiv.SortCriterion.SubmittedDate
+                    sort_by=arxiv.SortCriterion.Relevance if topic else arxiv.SortCriterion.SubmittedDate
                 )
                 
                 batch_papers = []

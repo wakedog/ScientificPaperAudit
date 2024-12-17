@@ -27,6 +27,10 @@ st.markdown("<h1 class='main-header'>Scientific Paper Analysis Platform</h1>", u
 # Sidebar controls
 with st.sidebar:
     st.header("Analysis Controls")
+    
+    # Search functionality
+    search_topic = st.text_input("Search Topic", 
+                                placeholder="Enter a topic to search for specific papers...")
     paper_count = st.slider("Number of papers to analyze", 10, 1000, 100)
     
     st.subheader("Filters")
@@ -45,7 +49,7 @@ with st.sidebar:
 if analyze_button:
     # Create analysis pipeline
     with st.spinner("Fetching papers..."):
-        papers = paper_fetcher.fetch_random_papers(paper_count)
+        papers = paper_fetcher.fetch_papers(paper_count, topic=search_topic)
         papers_df = paper_fetcher.create_dataframe(papers)
         
     with st.spinner("Analyzing papers..."):
@@ -115,6 +119,10 @@ if analyze_button:
         "published": st.column_config.DatetimeColumn(
             "Publication Date",
             format="DD/MM/YYYY"
+        ),
+        "url": st.column_config.LinkColumn(
+            "Paper Link",
+            help="Click to view the original paper"
         )
     }
     
