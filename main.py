@@ -201,22 +201,26 @@ if analyze_button:
         )
     
     # Display the dataframe with configured columns
-    selected_rows = st.data_editor(
+    edited_df = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True,
-        num_rows="dynamic"
+        num_rows="dynamic",
+        key="paper_table"
     )
 
     # Add detailed error analysis section
     st.subheader("Detailed Error Analysis")
     st.info("Click on a paper in the table above to see detailed error analysis")
 
+    # Get selected rows through session state
+    selected_indices = st.session_state.paper_table["selected_rows"]
+    
     # Display detailed error analysis for selected paper
-    if selected_rows is not None and len(selected_rows.selected_rows) > 0:
-        row_index = selected_rows.selected_rows[0]
-        selected_paper = papers[row_index]
+    if selected_indices and len(selected_indices) > 0:
+        selected_index = selected_indices[0]
+        selected_paper = papers[selected_index]
         analysis = analyzer.analyze_paper(selected_paper)
         
         for category in analyzer.error_categories:
