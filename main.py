@@ -109,29 +109,58 @@ if analyze_button:
                 corr_text = ", ".join([f"{cat} ({corr:+.2f})" for cat, corr in correlations.items()])
                 st.write(f"🔗 {category} correlates with: {corr_text}")
     
-    # Error distribution
-    st.plotly_chart(
-        visualizer.create_error_distribution(analysis_results),
-        use_container_width=True
-    )
+    # Create tabs for different visualization categories
+    viz_tabs = st.tabs(["Error Analysis", "Paper Relationships", "Trends", "Categories"])
     
-    # Correlation heatmap
-    st.plotly_chart(
-        visualizer.create_correlation_heatmap(analysis_results),
-        use_container_width=True
-    )
+    with viz_tabs[0]:
+        st.markdown("### Error Analysis")
+        # Error distribution
+        st.plotly_chart(
+            visualizer.create_error_distribution(analysis_results),
+            use_container_width=True
+        )
+        
+        # Correlation heatmap
+        st.plotly_chart(
+            visualizer.create_correlation_heatmap(analysis_results),
+            use_container_width=True
+        )
+        
+        # Confidence heatmap
+        st.plotly_chart(
+            visualizer.create_confidence_heatmap(analysis_results),
+            use_container_width=True
+        )
     
-    # Enhanced timeline view
-    st.plotly_chart(
-        visualizer.create_timeline_view(analysis_results),
-        use_container_width=True
-    )
+    with viz_tabs[1]:
+        st.markdown("### Paper Relationships")
+        # Paper similarity network
+        st.plotly_chart(
+            visualizer.create_paper_similarity_network(analysis_results),
+            use_container_width=True
+        )
     
-    # Confidence heatmap
-    st.plotly_chart(
-        visualizer.create_confidence_heatmap(analysis_results),
-        use_container_width=True
-    )
+    with viz_tabs[2]:
+        st.markdown("### Temporal Analysis")
+        # Enhanced timeline view
+        st.plotly_chart(
+            visualizer.create_timeline_view(analysis_results),
+            use_container_width=True
+        )
+        
+        # Trend analysis
+        st.plotly_chart(
+            visualizer.create_trend_analysis(analysis_results),
+            use_container_width=True
+        )
+    
+    with viz_tabs[3]:
+        st.markdown("### Category Distribution")
+        # Topic distribution
+        st.plotly_chart(
+            visualizer.create_topic_distribution(analysis_results),
+            use_container_width=True
+        )
     
     # Detailed results table
     st.subheader("Detailed Results")

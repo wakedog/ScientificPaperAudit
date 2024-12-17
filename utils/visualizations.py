@@ -1,6 +1,9 @@
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import pandas as pd
+import numpy as np
+import networkx as nx
 
 class Visualizer:
     def __init__(self):
@@ -234,6 +237,172 @@ class Visualizer:
             plot_bgcolor=self.colors['background'],
             paper_bgcolor=self.colors['background'],
             annotations=annotations
+        )
+        
+        return fig
+        
+    def create_paper_similarity_network(self, df: pd.DataFrame) -> go.Figure:
+        """Create interactive paper similarity network visualization."""
+        # Calculate similarity scores between papers based on their error patterns
+        similarity_matrix = pd.DataFrame(index=df.index, columns=df.index)
+        error_cols = [col for col in df.columns if 'issues' in col]
+        
+        for i in df.index:
+            for j in df.index:
+                if i != j:
+                    # Calculate cosine similarity between papers
+                    paper1 = df.loc[i, error_cols].values
+                    paper2 = df.loc[j, error_cols].values
+                    similarity = np.dot(paper1, paper2) / (np.linalg.norm(paper1) * np.linalg.norm(paper2))
+                    similarity_matrix.loc[i, j] = similarity
+        
+        # Create network layout
+        G = nx.from_pandas_adjacency(similarity_matrix)
+        pos = nx.spring_layout(G)
+        
+        # Create edges (connections between similar papers)
+        edge_x = []
+        edge_y = []
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+            
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=0.5, color='#888'),
+            hoverinfo='none',
+            mode='lines')
+        
+        # Create nodes (papers)
+        node_x = []
+        node_y = []
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers+text',
+            hoverinfo='text',
+            marker=dict(
+                showscale=True,
+                colorscale='YlOrRd',
+                size=10,
+                colorbar=dict(
+                    thickness=15,
+                    title='Error Count',
+                    xanchor='left',
+                    titleside='right'
+                )
+            ),
+            text=df['title'],
+            textposition="top center"
+        )
+        
+        # Color nodes by total error count
+        node_colors = df[error_cols].sum(axis=1)
+        node_trace.marker.color = node_colors
+        
+        # Create the figure
+        fig = go.Figure(data=[edge_trace, node_trace],
+                     layout=go.Layout(
+                         title='Paper Similarity Network',
+                         showlegend=False,
+                         hovermode='closest',
+                         margin=dict(b=20,l=5,r=5,t=40),
+                         plot_bgcolor=self.colors['background'],
+                         paper_bgcolor=self.colors['background'],
+                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
+                     )
+        
+        return fig
+        
+    def create_topic_distribution(self, df: pd.DataFrame) -> go.Figure:
+        """Create topic distribution visualization using categories."""
+        # Extract categories and count papers per category
+        categories = []
+        for cats in df['categories']:
+            categories.extend(cats)
+        category_counts = pd.Series(categories).value_counts()
+        
+        # Create sunburst chart
+        fig = go.Figure(go.Sunburst(
+            labels=category_counts.index,
+            parents=[""] * len(category_counts),
+            values=category_counts.values,
+            branchvalues="total",
+        ))
+        
+        fig.update_layout(
+            title={
+                'text': "Distribution of Papers by Category",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            width=800,
+            height=800,
+            plot_bgcolor=self.colors['background'],
+            paper_bgcolor=self.colors['background']
+        )
+        
+        return fig
+        
+    def create_trend_analysis(self, df: pd.DataFrame) -> go.Figure:
+        """Create trend analysis visualization showing patterns over time."""
+        # Prepare time series data
+        df['date'] = pd.to_datetime(df['published'])
+        df.set_index('date', inplace=True)
+        df_resampled = df[[col for col in df.columns if 'issues' in col]].resample('W').mean()
+        
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # Add traces for each error category
+        for col in df_resampled.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=df_resampled.index,
+                    y=df_resampled[col],
+                    name=col.replace('_issues', ''),
+                    mode='lines+markers'
+                ),
+                secondary_y=False
+            )
+        
+        # Calculate and add trend line
+        for col in df_resampled.columns:
+            z = np.polyfit(range(len(df_resampled.index)), df_resampled[col], 1)
+            p = np.poly1d(z)
+            fig.add_trace(
+                go.Scatter(
+                    x=df_resampled.index,
+                    y=p(range(len(df_resampled.index))),
+                    name=f"{col.replace('_issues', '')} trend",
+                    line=dict(dash='dash'),
+                    opacity=0.5
+                ),
+                secondary_y=False
+            )
+        
+        fig.update_layout(
+            title={
+                'text': "Error Trends Over Time",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title="Date",
+            yaxis_title="Number of Issues",
+            plot_bgcolor=self.colors['background'],
+            paper_bgcolor=self.colors['background'],
+            hovermode='x unified'
         )
         
         return fig
