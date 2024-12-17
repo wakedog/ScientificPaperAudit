@@ -172,44 +172,62 @@ Return ONLY the JSON object, no additional text.
         }
 
     def analyze_batch(self, papers: List[Dict]) -> pd.DataFrame:
-        """Analyze a batch of papers with progress tracking."""
+        """Analyze a batch of papers with parallel processing and progress tracking."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import math
+        
         results = []
         total_papers = len(papers)
+        processed_papers = 0
         
-        st.progress(0.0, text="Starting paper analysis...")
+        # Initialize progress
+        progress_bar = st.progress(0.0, text="Starting paper analysis...")
+        status_text = st.empty()
         
-        for i, paper in enumerate(papers):
+        # Calculate optimal batch size and worker count
+        batch_size = min(10, math.ceil(total_papers / 4))  # Process in smaller batches
+        max_workers = min(4, total_papers)  # Limit concurrent workers
+        
+        def process_paper(paper):
             try:
                 analysis = self.analyze_paper(paper)
-                result = {
+                return {
                     'title': paper['title'],
-                    'published': paper['published']
+                    'published': paper['published'],
+                    **{f"{category}_confidence": data['confidence'] for category, data in analysis.items()},
+                    **{f"{category}_issues": data['issues'] for category, data in analysis.items()}
                 }
-                for category, data in analysis.items():
-                    result[f"{category}_confidence"] = data['confidence']
-                    result[f"{category}_issues"] = data['issues']
-                results.append(result)
-                
-                # Update progress
-                progress = (i + 1) / total_papers
-                st.progress(progress, text=f"Analyzing paper {i + 1}/{total_papers}")
-                
-                # Add small delay between API calls to avoid rate limiting
-                time.sleep(0.5)
-                
             except Exception as e:
                 print(f"Error analyzing paper {paper['title']}: {str(e)}")
-                # Use fallback analysis for failed papers
                 fallback = self._generate_fallback_analysis()
-                result = {
+                return {
                     'title': paper['title'],
-                    'published': paper['published']
+                    'published': paper['published'],
+                    **{f"{category}_confidence": data['confidence'] for category, data in fallback.items()},
+                    **{f"{category}_issues": data['issues'] for category, data in fallback.items()}
                 }
-                for category, data in fallback.items():
-                    result[f"{category}_confidence"] = data['confidence']
-                    result[f"{category}_issues"] = data['issues']
-                results.append(result)
         
+        # Process papers in parallel batches
+        for i in range(0, total_papers, batch_size):
+            batch = papers[i:i + batch_size]
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_paper = {executor.submit(process_paper, paper): paper for paper in batch}
+                
+                for future in as_completed(future_to_paper):
+                    result = future.result()
+                    results.append(result)
+                    processed_papers += 1
+                    
+                    # Update progress
+                    progress = processed_papers / total_papers
+                    progress_bar.progress(progress)
+                    status_text.text(f"Analyzed {processed_papers}/{total_papers} papers")
+                    
+                    # Minimal delay between batches to avoid rate limiting
+                    time.sleep(0.1)
+        
+        status_text.text("Analysis complete!")
         return pd.DataFrame(results)
 
     def aggregate_patterns(self, results: pd.DataFrame) -> Dict:
