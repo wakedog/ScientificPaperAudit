@@ -28,6 +28,17 @@ st.markdown("<h1 class='main-header'>Scientific Paper Analysis Platform</h1>", u
 with st.sidebar:
     st.header("Analysis Controls")
     paper_count = st.slider("Number of papers to analyze", 10, 1000, 100)
+    
+    st.subheader("Filters")
+    min_confidence = st.slider("Minimum Confidence Score", 0, 100, 50)
+    error_threshold = st.slider("Minimum Issues to Highlight", 0, 10, 3)
+    
+    selected_categories = st.multiselect(
+        "Filter Error Categories",
+        analyzer.error_categories,
+        default=analyzer.error_categories
+    )
+    
     analyze_button = st.button("Start Analysis")
 
 # Main content
@@ -40,16 +51,36 @@ if analyze_button:
     with st.spinner("Analyzing papers..."):
         analysis_results = analyzer.analyze_batch(papers)
         
+    # Filter data based on user selections
+    filtered_results = analysis_results.copy()
+    
+    # Apply confidence filter
+    confidence_cols = [col for col in filtered_results.columns if 'confidence' in col]
+    confidence_mask = filtered_results[confidence_cols].mean(axis=1) >= min_confidence
+    filtered_results = filtered_results[confidence_mask]
+    
+    # Apply category filters
+    selected_cols = []
+    for category in selected_categories:
+        selected_cols.extend([
+            col for col in filtered_results.columns 
+            if category.lower().replace(' ', '_') in col.lower()
+        ])
+    
     # Display summary metrics
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Papers Analyzed", len(papers))
+        st.metric("Total Papers", len(papers))
     with col2:
-        avg_issues = analysis_results[[col for col in analysis_results.columns if 'issues' in col]].mean().mean()
-        st.metric("Average Issues per Paper", f"{avg_issues:.2f}")
+        st.metric("Filtered Papers", len(filtered_results))
     with col3:
-        avg_confidence = analysis_results[[col for col in analysis_results.columns if 'confidence' in col]].mean().mean()
-        st.metric("Average Confidence Score", f"{avg_confidence:.1f}%")
+        avg_issues = filtered_results[[col for col in filtered_results.columns if 'issues' in col]].mean().mean()
+        st.metric("Avg Issues/Paper", f"{avg_issues:.2f}")
+    with col4:
+        high_risk_papers = len(filtered_results[
+            filtered_results[[col for col in filtered_results.columns if 'issues' in col]].sum(axis=1) >= error_threshold
+        ])
+        st.metric("High Risk Papers", high_risk_papers)
 
     # Visualizations
     st.subheader("Analysis Results")

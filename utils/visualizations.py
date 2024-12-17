@@ -13,23 +13,50 @@ class Visualizer:
         }
 
     def create_error_distribution(self, df: pd.DataFrame) -> go.Figure:
-        """Create error distribution visualization."""
+        """Create enhanced error distribution visualization with hover data."""
         error_counts = df[[col for col in df.columns if 'issues' in col]].sum()
+        confidence_avgs = df[[col for col in df.columns if 'confidence' in col]].mean()
+        
+        # Create hover text combining issues and confidence
+        hover_text = [
+            f"Category: {cat}<br>" +
+            f"Total Issues: {issues}<br>" +
+            f"Avg Confidence: {conf:.1f}%"
+            for cat, issues, conf in zip(
+                error_counts.index,
+                error_counts.values,
+                confidence_avgs.values
+            )
+        ]
         
         fig = go.Figure(data=[
             go.Bar(
                 x=error_counts.index,
                 y=error_counts.values,
-                marker_color=self.colors['navy']
+                marker_color=[self.colors['highlight1'] if x > error_counts.mean() else self.colors['navy'] 
+                            for x in error_counts.values],
+                hovertext=hover_text,
+                hoverinfo='text'
             )
         ])
         
         fig.update_layout(
-            title="Distribution of Errors Across Categories",
+            title={
+                'text': "Distribution of Errors Across Categories",
+                'y':0.95,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
             xaxis_title="Error Category",
             yaxis_title="Number of Issues",
             plot_bgcolor=self.colors['background'],
-            paper_bgcolor=self.colors['background']
+            paper_bgcolor=self.colors['background'],
+            hoverlabel=dict(
+                bgcolor="white",
+                font_size=12,
+                font_family="Arial"
+            )
         )
         
         return fig
