@@ -378,22 +378,34 @@ class Visualizer:
                 values=category_counts.values,
                 branchvalues="total",
             ))
-        
-        fig.update_layout(
-            title={
-                'text': "Distribution of Papers by Category",
-                'y': 0.95,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'
-            },
-            width=800,
-            height=800,
-            plot_bgcolor=self.colors['background'],
-            paper_bgcolor=self.colors['background']
-        )
-        
-        return fig
+            
+            fig.update_layout(
+                title={
+                    'text': "Distribution of Papers by Category",
+                    'y': 0.95,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'
+                },
+                width=800,
+                height=800,
+                plot_bgcolor=self.colors['background'],
+                paper_bgcolor=self.colors['background']
+            )
+            
+            return fig
+            
+        except Exception as e:
+            print(f"Error creating topic distribution: {str(e)}")
+            # Return an empty figure with error message
+            fig = go.Figure()
+            fig.add_annotation(
+                text=f"Error creating visualization: {str(e)}",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(size=16)
+            )
+            return fig
         
     def create_trend_analysis(self, df: pd.DataFrame) -> go.Figure:
         """Create trend analysis visualization showing patterns over time."""
