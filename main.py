@@ -171,24 +171,29 @@ if analyze_button:
     # Detailed results table
     st.subheader("Detailed Results")
     
+    # Initialize session state for table selection if not exists
+    if 'paper_analysis_table' not in st.session_state:
+        st.session_state.paper_analysis_table = {'selected_rows': []}
+    
     # Prepare display dataframe
     display_df = analysis_results.copy()
     # Add paper URLs to display dataframe
-    display_df['url'] = papers_df['url'].apply(lambda x: x if isinstance(x, str) else '')
+    display_df['url'] = papers_df['url'].apply(lambda x: str(x) if pd.notna(x) else '')
     
     # Ensure URLs are valid strings and properly formatted
     def format_paper_url(url):
-        if pd.isna(url) or not url:
+        if not url or pd.isna(url):
             return ''
-        url_str = str(url).strip()
-        if not url_str:
-            return ''
-        if url_str.startswith('http'):
-            return url_str
         try:
+            url_str = str(url).strip()
+            if not url_str:
+                return ''
+            if url_str.startswith('http'):
+                return url_str
             paper_id = url_str.split('/')[-1]
             return f'https://arxiv.org/abs/{paper_id}'
-        except:
+        except Exception as e:
+            print(f"Error formatting URL {url}: {str(e)}")
             return ''
             
     display_df['url'] = display_df['url'].apply(format_paper_url)
@@ -235,21 +240,23 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    st.data_editor(
+    selected_indices = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True,
         num_rows="dynamic",
         key="paper_analysis_table",
-        disabled=True,
+        disabled=["url"] + [col for col in display_df.columns if col not in ["title", "url"]],
         column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url", "categories"]],
-        height=400
+        height=400,
+        on_change=lambda: None,
+        selection_mode="single"
     )
 
-    # Handle paper selection using selected_rows
-    if st.session_state.paper_analysis_table["selected_rows"]:
-        selected_index = st.session_state.paper_analysis_table["selected_rows"][0]
+    # Handle paper selection
+    if len(selected_indices) > 0:
+        selected_index = selected_indices[0]
         selected_paper_title = display_df.iloc[selected_index]["title"]
         selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
         
