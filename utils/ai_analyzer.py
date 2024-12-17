@@ -1,8 +1,10 @@
 import os
 import json
+import time
+import requests
 from typing import List, Dict
 import pandas as pd
-import pplx
+from datetime import datetime, timedelta
 
 class PaperAnalyzer:
     def __init__(self):
@@ -21,20 +23,47 @@ class PaperAnalyzer:
             prompt = self._generate_analysis_prompt(paper)
             
             # Make API call to Perplexity
-            client = pplx.Client(api_key=os.getenv('PPLX_API_KEY'))
-            response = client.chat.completions.create(
-                model="pplx-70b-online",
-                messages=[{
+            headers = {
+                "Authorization": f"Bearer {os.getenv('PPLX_API_KEY')}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "model": "mistral-7b-instruct",
+                "messages": [{
                     "role": "system",
                     "content": "You are an expert scientific paper analyzer. Analyze the paper for potential issues and provide structured feedback."
                 }, {
                     "role": "user",
                     "content": prompt
                 }]
-            )
+            }
+            
+            # Add retry mechanism
+            max_retries = 3
+            retry_delay = 1
+            
+            for attempt in range(max_retries):
+                try:
+                    response = requests.post(
+                        "https://api.perplexity.ai/chat/completions",
+                        headers=headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    response_data = response.json()
+                    break
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise e
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
             
             # Parse the response
-            return self._parse_analysis_response(response['choices'][0]['message']['content'])
+            if 'choices' in response_data and response_data['choices']:
+                return self._parse_analysis_response(response_data['choices'][0]['message']['content'])
+            else:
+                raise ValueError("Unexpected API response format")
             
         except Exception as e:
             print(f"Error calling Perplexity API: {e}")
