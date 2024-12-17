@@ -212,42 +212,26 @@ if analyze_button:
             help=f"Number of issues found in {category}"
         )
     
-    # Display the dataframe with configured columns
-    edited_df = st.data_editor(
-        display_df,
-        use_container_width=True,
-        column_config=column_config,
-        hide_index=True,
-        num_rows="dynamic",
-        key="paper_table",
-        disabled=False,
-        on_change=lambda: None,
-        args=(),
-        kwargs={},
-    )
-
     # Add detailed error analysis section
     st.subheader("Detailed Error Analysis")
-    st.info("Click on a paper in the table above to see detailed error analysis")
+    st.info("Click on a paper in the table below to see detailed error analysis")
 
-    # Handle paper selection through the data editor
+    # Display the dataframe with configured columns and handle selection
     selection = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True,
         num_rows="dynamic",
-        disabled=False,
-        key="paper_table",
-        on_change=lambda: None,
-        args=(),
-        kwargs={},
+        key="paper_analysis_table",
+        disabled=False
     )
     
     # Get selected rows
-    if len(selection.index) > 0 and selection.selected_rows:
-        selected_idx = selection.index.get_loc(selection.selected_rows[0])
-        if st.session_state.selected_paper_index != selected_idx:
+    if selection.selected_rows:
+        selected_paper_title = selection.selected_rows[0]['title']
+        selected_idx = papers_df[papers_df['title'] == selected_paper_title].index[0]
+        if 'selected_paper_index' not in st.session_state or st.session_state.selected_paper_index != selected_idx:
             st.session_state.selected_paper_index = selected_idx
             st.rerun()
     
