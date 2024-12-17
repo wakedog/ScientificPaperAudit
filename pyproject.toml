@@ -8,5 +8,6 @@ dependencies = [
     "openai>=1.57.4",
     "pandas>=2.2.3",
     "plotly>=5.24.1",
+    "pplx>=0.1.3",
     "streamlit>=1.41.1",
 ]
