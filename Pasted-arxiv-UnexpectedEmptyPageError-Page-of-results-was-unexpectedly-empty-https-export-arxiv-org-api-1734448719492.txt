@@ -1,0 +1,31 @@
+arxiv.UnexpectedEmptyPageError: Page of results was unexpectedly empty (https://export.arxiv.org/api/query?search_query=cat%3Acs.%2A+OR+cat%3Aphysics.%2A+OR+cat%3Amath.%2A&id_list=&sortBy=relevance&sortOrder=descending&start=100&max_results=100)
+Traceback:
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 88, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 579, in code_to_exec
+    exec(code, module.__dict__)
+File "/home/runner/ScientificPaperSentinel/main.py", line 37, in <module>
+    papers = paper_fetcher.fetch_random_papers(paper_count)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/utils/paper_fetcher.py", line 19, in fetch_random_papers
+    for result in self.client.results(search):
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 600, in _results
+    feed = self._parse_feed(page_url, first_page=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 634, in _parse_feed
+    return self._parse_feed(url, first_page=first_page, _try_index=_try_index + 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 634, in _parse_feed
+    return self._parse_feed(url, first_page=first_page, _try_index=_try_index + 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 634, in _parse_feed
+    return self._parse_feed(url, first_page=first_page, _try_index=_try_index + 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 636, in _parse_feed
+    raise err
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 626, in _parse_feed
+    return self.__try_parse_feed(url, first_page=first_page, try_index=_try_index)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/ScientificPaperSentinel/.pythonlibs/lib/python3.11/site-packages/arxiv/__init__.py", line 667, in __try_parse_feed
+    raise UnexpectedEmptyPageError(url, try_index, feed)
