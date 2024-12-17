@@ -217,20 +217,23 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    selection = st.data_editor(
+    edited_df = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True,
         num_rows="dynamic",
         key="paper_analysis_table",
-        disabled=False
+        disabled=False,
+        on_change=None  # Remove explicit on_change
     )
     
-    # Get selected rows
-    if selection.selected_rows:
-        selected_paper_title = selection.selected_rows[0]['title']
+    # Handle paper selection using Streamlit's built-in selection
+    if st.session_state.paper_analysis_table.get("selected_rows", []):
+        selected_row_index = st.session_state.paper_analysis_table["selected_rows"][0]
+        selected_paper_title = edited_df.iloc[selected_row_index]["title"]
         selected_idx = papers_df[papers_df['title'] == selected_paper_title].index[0]
+        
         if 'selected_paper_index' not in st.session_state or st.session_state.selected_paper_index != selected_idx:
             st.session_state.selected_paper_index = selected_idx
             st.rerun()
