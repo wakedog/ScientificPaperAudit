@@ -5,6 +5,7 @@ import requests
 from typing import List, Dict
 import pandas as pd
 from datetime import datetime, timedelta
+import streamlit as st
 
 class PaperAnalyzer:
     def __init__(self):

@@ -3,6 +3,7 @@ import pandas as pd
 from typing import List, Dict
 import random
 import time
+import streamlit as st
 
 class PaperFetcher:
     def __init__(self):
