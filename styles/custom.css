@@ -1,0 +1,33 @@
+/* Academic-inspired styling */
+.stApp {
+    font-family: "Times New Roman", Times, serif;
+}
+
+.main-header {
+    color: #000080;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+}
+
+.paper-card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+    margin: 1rem 0;
+}
+
+.metric-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.chart-container {
+    background-color: #ffffff;
+    padding: 1rem;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
