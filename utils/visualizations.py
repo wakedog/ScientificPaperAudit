@@ -125,24 +125,115 @@ class Visualizer:
         return fig
 
     def create_timeline_view(self, df: pd.DataFrame) -> go.Figure:
-        """Create timeline of papers and their issues."""
+        """Create enhanced timeline view with trend analysis."""
+        # Calculate moving averages for smoother trends
+        window_size = 7
+        df = df.sort_values('published')
         df['total_issues'] = df[[col for col in df.columns if 'issues' in col]].sum(axis=1)
+        df['ma_issues'] = df['total_issues'].rolling(window=window_size).mean()
         
-        fig = px.scatter(
-            df,
-            x='published',
-            y='total_issues',
-            hover_data=['title'],
-            color='total_issues',
-            color_continuous_scale='Viridis'
-        )
+        # Create main scatter plot
+        fig = go.Figure()
+        
+        # Add individual points
+        fig.add_trace(go.Scatter(
+            x=df['published'],
+            y=df['total_issues'],
+            mode='markers',
+            name='Individual Papers',
+            marker=dict(
+                size=8,
+                color=df['total_issues'],
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title="Issue Count")
+            ),
+            hovertemplate="<br>".join([
+                "Title: %{customdata[0]}",
+                "Date: %{x}",
+                "Issues: %{y}",
+                "<extra></extra>"
+            ]),
+            customdata=df[['title']]
+        ))
+        
+        # Add trend line
+        fig.add_trace(go.Scatter(
+            x=df['published'],
+            y=df['ma_issues'],
+            mode='lines',
+            name=f'{window_size}-Day Moving Average',
+            line=dict(color='red', width=2)
+        ))
         
         fig.update_layout(
-            title="Issues Distribution Over Time",
+            title={
+                'text': "Temporal Analysis of Paper Issues",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
             xaxis_title="Publication Date",
-            yaxis_title="Total Issues Found",
+            yaxis_title="Number of Issues",
             plot_bgcolor=self.colors['background'],
-            paper_bgcolor=self.colors['background']
+            paper_bgcolor=self.colors['background'],
+            hovermode='closest',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bgcolor="rgba(255, 255, 255, 0.8)"
+            )
+        )
+        
+        return fig
+        
+    def create_correlation_heatmap(self, df: pd.DataFrame) -> go.Figure:
+        """Create correlation heatmap between different error categories."""
+        # Extract issues columns
+        issues_cols = [col for col in df.columns if 'issues' in col]
+        correlation_matrix = df[issues_cols].corr()
+        
+        # Create annotation text
+        annotations = []
+        for i, row in enumerate(correlation_matrix.values):
+            for j, value in enumerate(row):
+                annotations.append(
+                    dict(
+                        x=correlation_matrix.columns[j],
+                        y=correlation_matrix.index[i],
+                        text=f"{value:.2f}",
+                        font=dict(color='white' if abs(value) > 0.4 else 'black'),
+                        showarrow=False
+                    )
+                )
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=correlation_matrix,
+            x=correlation_matrix.columns,
+            y=correlation_matrix.index,
+            colorscale='RdBu',
+            zmid=0,
+            showscale=True,
+            colorbar=dict(title="Correlation")
+        ))
+        
+        fig.update_layout(
+            title={
+                'text': "Error Category Correlations",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title="Error Category",
+            yaxis_title="Error Category",
+            plot_bgcolor=self.colors['background'],
+            paper_bgcolor=self.colors['background'],
+            annotations=annotations
         )
         
         return fig

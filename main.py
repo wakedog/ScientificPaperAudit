@@ -89,21 +89,47 @@ if analyze_button:
     # Visualizations
     st.subheader("Analysis Results")
     
+    # Get pattern analysis
+    patterns = analyzer.aggregate_patterns(analysis_results)
+    
+    # Display pattern insights
+    st.markdown("### Key Pattern Insights")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### Trend Analysis")
+        for category, trend in patterns['temporal_patterns']['trend_direction'].items():
+            trend_icon = "📈" if trend == "increasing" else "📉" if trend == "decreasing" else "➡️"
+            st.write(f"{trend_icon} {category}: {trend.title()}")
+    
+    with col2:
+        st.markdown("#### Strong Correlations")
+        for category, correlations in patterns['error_correlations'].items():
+            if correlations:
+                corr_text = ", ".join([f"{cat} ({corr:+.2f})" for cat, corr in correlations.items()])
+                st.write(f"🔗 {category} correlates with: {corr_text}")
+    
     # Error distribution
     st.plotly_chart(
         visualizer.create_error_distribution(analysis_results),
         use_container_width=True
     )
     
-    # Confidence heatmap
+    # Correlation heatmap
     st.plotly_chart(
-        visualizer.create_confidence_heatmap(analysis_results),
+        visualizer.create_correlation_heatmap(analysis_results),
         use_container_width=True
     )
     
-    # Timeline view
+    # Enhanced timeline view
     st.plotly_chart(
         visualizer.create_timeline_view(analysis_results),
+        use_container_width=True
+    )
+    
+    # Confidence heatmap
+    st.plotly_chart(
+        visualizer.create_confidence_heatmap(analysis_results),
         use_container_width=True
     )
     

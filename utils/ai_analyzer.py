@@ -125,11 +125,13 @@ class PaperAnalyzer:
         return pd.DataFrame(results)
 
     def aggregate_patterns(self, results: pd.DataFrame) -> Dict:
-        """Aggregate and analyze error patterns across papers."""
+        """Aggregate and analyze error patterns across papers with enhanced detection."""
         pattern_stats = {
             'common_issues': {},
             'severity_distribution': {},
-            'confidence_trends': {}
+            'confidence_trends': {},
+            'error_correlations': {},
+            'temporal_patterns': {}
         }
         
         # Analyze each category
@@ -137,10 +139,12 @@ class PaperAnalyzer:
             confidence_col = f"{category}_confidence"
             issues_col = f"{category}_issues"
             
+            # Basic statistics
             pattern_stats['confidence_trends'][category] = {
                 'mean': results[confidence_col].mean(),
                 'std': results[confidence_col].std(),
-                'median': results[confidence_col].median()
+                'median': results[confidence_col].median(),
+                'trend': self._calculate_trend(results[confidence_col])
             }
             
             pattern_stats['severity_distribution'][category] = {
@@ -148,5 +152,45 @@ class PaperAnalyzer:
                 'medium': len(results[(results[issues_col] > 1) & (results[issues_col] <= 3)]),
                 'high': len(results[results[issues_col] > 3])
             }
+            
+            # Calculate correlations with other categories
+            correlations = {}
+            for other_cat in self.error_categories:
+                if other_cat != category:
+                    other_issues = f"{other_cat}_issues"
+                    corr = results[issues_col].corr(results[other_issues])
+                    if abs(corr) > 0.3:  # Only include significant correlations
+                        correlations[other_cat] = round(corr, 2)
+            
+            pattern_stats['error_correlations'][category] = correlations
+        
+        # Analyze temporal patterns
+        results['year_month'] = pd.to_datetime(results['published']).dt.to_period('M')
+        temporal_data = results.groupby('year_month').agg({
+            f"{cat}_issues": ['mean', 'std'] for cat in self.error_categories
+        }).tail(6)  # Last 6 months
+        
+        pattern_stats['temporal_patterns'] = {
+            'monthly_averages': temporal_data.to_dict(),
+            'trend_direction': self._detect_trend_direction(temporal_data)
+        }
         
         return pattern_stats
+        
+    def _calculate_trend(self, series: pd.Series) -> str:
+        """Calculate the trend direction of a series."""
+        if len(series) < 2:
+            return "stable"
+        
+        slope = (series.iloc[-1] - series.iloc[0]) / len(series)
+        if abs(slope) < 0.1:
+            return "stable"
+        return "increasing" if slope > 0 else "decreasing"
+        
+    def _detect_trend_direction(self, temporal_data: pd.DataFrame) -> Dict:
+        """Detect trend direction for each category over time."""
+        trends = {}
+        for category in self.error_categories:
+            means = temporal_data[f"{category}_issues"]['mean']
+            trends[category] = self._calculate_trend(means)
+        return trends
