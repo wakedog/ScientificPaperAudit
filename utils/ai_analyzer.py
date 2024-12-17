@@ -18,7 +18,7 @@ class PaperAnalyzer:
         ]
         
     def analyze_paper(self, paper: Dict) -> Dict:
-        """Analyze a single paper for potential issues."""
+        """Analyze a single paper for potential issues with detailed error locations."""
         try:
             # Create a detailed analysis prompt
             prompt = self._generate_analysis_prompt(paper)
@@ -31,16 +31,21 @@ class PaperAnalyzer:
             }
             
             payload = {
-                "model": "mixtral-8x7b-instruct",  # Updated to a more capable model
+                "model": "mixtral-8x7b-instruct",
                 "messages": [{
                     "role": "system",
-                    "content": """You are an expert scientific paper analyzer. Analyze papers for potential issues and provide structured feedback in JSON format.
+                    "content": """You are an expert scientific paper analyzer. Analyze papers for potential issues and provide detailed structured feedback in JSON format.
+                    For each issue found:
+                    1. Identify the specific location (section, paragraph, or sentence)
+                    2. Explain the nature of the problem
+                    3. Suggest potential improvements
+                    4. Rate the severity (low, medium, high)
                     Focus on methodology, statistical analysis, data integrity, citations, and technical accuracy."""
                 }, {
                     "role": "user",
                     "content": prompt
                 }],
-                "max_tokens": 1024,
+                "max_tokens": 2048,
                 "temperature": 0.7,
                 "top_p": 0.9
             }
@@ -95,8 +100,8 @@ class PaperAnalyzer:
             return self._generate_fallback_analysis()
 
     def _generate_analysis_prompt(self, paper: Dict) -> str:
-        """Generate detailed analysis prompt for the paper."""
-        return f"""Analyze this scientific paper and provide a structured assessment focusing on potential issues and quality metrics.
+        """Generate detailed analysis prompt for the paper with error locations."""
+        return f"""Analyze this scientific paper and provide a detailed structured assessment focusing on potential issues, their locations, and quality metrics.
 
 INPUT PAPER:
 Title: {paper['title']}
@@ -105,13 +110,19 @@ Authors: {paper['authors']}
 Published: {paper['published']}
 
 REQUIRED OUTPUT FORMAT:
-Provide a JSON object with the following structure for each category (methodology, statistical_analysis, data_integrity, citation_issues, technical_accuracy):
+Provide a JSON object with the following structure for each category:
 
 {{
     "methodology": {{
         "confidence": <0-100 score>,
-        "issues": <number of issues>,
-        "severity": <"low"|"medium"|"high">,
+        "issues": [{{
+            "location": <specific location in paper>,
+            "description": <detailed issue description>,
+            "suggestion": <improvement suggestion>,
+            "severity": <"low"|"medium"|"high">,
+            "context": <relevant text excerpt>
+        }}],
+        "overall_severity": <"low"|"medium"|"high">,
         "key_points": [<list of main points>]
     }},
     "statistical_analysis": {{ ... }},

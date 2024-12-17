@@ -201,12 +201,51 @@ if analyze_button:
         )
     
     # Display the dataframe with configured columns
-    st.dataframe(
+    selected_rows = st.dataframe(
         display_df,
         use_container_width=True,
         column_config=column_config,
         hide_index=True
     )
+
+    # Add detailed error analysis section
+    st.subheader("Detailed Error Analysis")
+    st.info("Click on a paper in the table above to see detailed error analysis")
+
+    # Display detailed error analysis for selected paper
+    if selected_rows:
+        selected_paper = papers[list(selected_rows)[0]]
+        analysis = analyzer.analyze_paper(selected_paper)
+        
+        for category in analyzer.error_categories:
+            if category in analysis:
+                with st.expander(f"{category} Analysis"):
+                    issues = analysis[category].get('issues', [])
+                    if isinstance(issues, list) and issues:
+                        for idx, issue in enumerate(issues, 1):
+                            severity_color = {
+                                'high': 'red',
+                                'medium': 'orange',
+                                'low': 'blue'
+                            }.get(issue.get('severity', 'low'), 'gray')
+                            
+                            st.markdown(f"""
+                            ##### Issue {idx}
+                            **Location:** {issue.get('location', 'Not specified')}  
+                            **Severity:** :{severity_color}[●] {issue.get('severity', 'Not specified')}
+                            
+                            **Description:**  
+                            {issue.get('description', 'No description available')}
+                            
+                            **Context:**  
+                            > {issue.get('context', 'No context available')}
+                            
+                            **Suggestion:**  
+                            {issue.get('suggestion', 'No suggestion available')}
+                            """)
+                            st.divider()
+                    else:
+                        st.write("No specific issues found in this category.")
     
     # Export functionality
     csv = analysis_results.to_csv(index=False)
