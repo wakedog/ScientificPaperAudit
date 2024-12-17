@@ -244,21 +244,37 @@ class Visualizer:
     def create_paper_similarity_network(self, df: pd.DataFrame) -> go.Figure:
         """Create interactive paper similarity network visualization."""
         # Calculate similarity scores between papers based on their error patterns
-        similarity_matrix = pd.DataFrame(index=df.index, columns=df.index)
         error_cols = [col for col in df.columns if 'issues' in col]
         
-        for i in df.index:
-            for j in df.index:
+        # Ensure we have numeric data
+        numeric_df = df[error_cols].fillna(0).astype(float)
+        
+        # Initialize similarity matrix with zeros
+        n_papers = len(numeric_df)
+        similarity_matrix = np.zeros((n_papers, n_papers))
+        
+        # Calculate similarities
+        for i in range(n_papers):
+            for j in range(n_papers):
                 if i != j:
-                    # Calculate cosine similarity between papers
-                    paper1 = df.loc[i, error_cols].values
-                    paper2 = df.loc[j, error_cols].values
-                    similarity = np.dot(paper1, paper2) / (np.linalg.norm(paper1) * np.linalg.norm(paper2))
-                    similarity_matrix.loc[i, j] = similarity
+                    paper1 = numeric_df.iloc[i].values
+                    paper2 = numeric_df.iloc[j].values
+                    # Avoid division by zero
+                    norm1 = np.linalg.norm(paper1)
+                    norm2 = np.linalg.norm(paper2)
+                    if norm1 > 0 and norm2 > 0:
+                        similarity_matrix[i, j] = np.dot(paper1, paper2) / (norm1 * norm2)
+        
+        # Convert to pandas DataFrame for networkx
+        similarity_df = pd.DataFrame(
+            similarity_matrix,
+            index=numeric_df.index,
+            columns=numeric_df.index
+        )
         
         # Create network layout
-        G = nx.from_pandas_adjacency(similarity_matrix)
-        pos = nx.spring_layout(G)
+        G = nx.from_numpy_array(similarity_matrix)
+        pos = nx.spring_layout(G, k=1, iterations=50)
         
         # Create edges (connections between similar papers)
         edge_x = []
