@@ -21,6 +21,10 @@ paper_fetcher = PaperFetcher()
 analyzer = PaperAnalyzer()
 visualizer = Visualizer()
 
+# Initialize session state
+if 'selected_paper_index' not in st.session_state:
+    st.session_state.selected_paper_index = None
+
 # Header
 st.markdown("<h1 class='main-header'>Scientific Paper Analysis Platform</h1>", unsafe_allow_html=True)
 
@@ -226,15 +230,26 @@ if analyze_button:
     st.subheader("Detailed Error Analysis")
     st.info("Click on a paper in the table above to see detailed error analysis")
 
-    # Get selected rows from the editor
-    selected_indices = st.session_state.paper_table.get("selected_rows", [])
+    # Handle paper selection through the data editor
+    selection = st.data_editor(
+        display_df,
+        use_container_width=True,
+        column_config=column_config,
+        hide_index=True,
+        num_rows="dynamic",
+        disabled=False,
+        key="paper_table",
+        on_change=lambda: None,
+        args=(),
+        kwargs={},
+    )
     
-    # If we have a selection, update the session state
-    if selected_indices:
-        selected_index = display_df.index[selected_indices[0]]
-        if 'selected_paper_index' not in st.session_state or st.session_state.selected_paper_index != selected_index:
-            st.session_state.selected_paper_index = selected_index
-            st.experimental_rerun()
+    # Get selected rows
+    if len(selection.index) > 0 and selection.selected_rows:
+        selected_idx = selection.index.get_loc(selection.selected_rows[0])
+        if st.session_state.selected_paper_index != selected_idx:
+            st.session_state.selected_paper_index = selected_idx
+            st.rerun()
     
     # Display detailed error analysis for selected paper
     if st.session_state.selected_paper_index is not None:
