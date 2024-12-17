@@ -192,8 +192,8 @@ if analyze_button:
             "Paper Link",
             help="Click to view the original paper",
             display_text="View Paper",
-            width="small",
-            validate="url"
+            width="medium",
+            required=True
         )
     }
     
@@ -217,7 +217,7 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    edited_df = st.data_editor(
+    selection = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
@@ -225,18 +225,18 @@ if analyze_button:
         num_rows="dynamic",
         key="paper_analysis_table",
         disabled=False,
-        on_change=None  # Remove explicit on_change
+        column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url"]],
+        on_change=None,
+        height=400
     )
     
-    # Handle paper selection using Streamlit's built-in selection
-    if st.session_state.paper_analysis_table.get("selected_rows", []):
-        selected_row_index = st.session_state.paper_analysis_table["selected_rows"][0]
-        selected_paper_title = edited_df.iloc[selected_row_index]["title"]
-        selected_idx = papers_df[papers_df['title'] == selected_paper_title].index[0]
+    # Handle paper selection
+    if selection is not None and len(selection) > 0:
+        selected_paper_title = selection.iloc[0]["title"]
+        selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
         
-        if 'selected_paper_index' not in st.session_state or st.session_state.selected_paper_index != selected_idx:
-            st.session_state.selected_paper_index = selected_idx
-            st.rerun()
+        if selected_paper:
+            st.session_state.selected_paper_index = papers.index(selected_paper)
     
     # Display detailed error analysis for selected paper
     if st.session_state.selected_paper_index is not None:
