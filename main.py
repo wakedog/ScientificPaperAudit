@@ -171,9 +171,9 @@ if analyze_button:
     # Detailed results table
     st.subheader("Detailed Results")
     
-    # Initialize session state for table selection if not exists
-    if 'paper_analysis_table' not in st.session_state:
-        st.session_state.paper_analysis_table = {'selected_rows': []}
+    # Initialize session state for selected paper if not exists
+    if 'selected_paper_index' not in st.session_state:
+        st.session_state.selected_paper_index = None
     
     # Prepare display dataframe
     display_df = analysis_results.copy()
@@ -240,7 +240,7 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    edited_df = st.data_editor(
+    selected_row = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
@@ -252,15 +252,12 @@ if analyze_button:
         height=400
     )
 
-    # Get selected rows from the editor's return value
-    if st.session_state.paper_analysis_table and 'edited_rows' in st.session_state.paper_analysis_table:
-        selected_indices = list(st.session_state.paper_analysis_table['edited_rows'].keys())
-
     # Handle paper selection
-    if 'paper_analysis_table' in st.session_state and 'edited_rows' in st.session_state.paper_analysis_table:
-        selected_indices = list(st.session_state.paper_analysis_table['edited_rows'].keys())
-        if selected_indices:
-            selected_index = selected_indices[0]
+    if selected_row is not None and isinstance(selected_row, pd.DataFrame):
+        # Get the index of the edited/selected row
+        edited_rows = selected_row.index.difference(display_df.index)
+        if len(edited_rows) > 0:
+            selected_index = edited_rows[0]
             selected_paper_title = display_df.iloc[selected_index]["title"]
             selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
             
