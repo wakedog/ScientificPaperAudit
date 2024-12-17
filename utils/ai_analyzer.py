@@ -138,18 +138,43 @@ class PaperAnalyzer:
         }
 
     def analyze_batch(self, papers: List[Dict]) -> pd.DataFrame:
-        """Analyze a batch of papers."""
+        """Analyze a batch of papers with progress tracking."""
         results = []
-        for paper in papers:
-            analysis = self.analyze_paper(paper)
-            result = {
-                'title': paper['title'],
-                'published': paper['published']
-            }
-            for category, data in analysis.items():
-                result[f"{category}_confidence"] = data['confidence']
-                result[f"{category}_issues"] = data['issues']
-            results.append(result)
+        total_papers = len(papers)
+        
+        st.progress(0.0, text="Starting paper analysis...")
+        
+        for i, paper in enumerate(papers):
+            try:
+                analysis = self.analyze_paper(paper)
+                result = {
+                    'title': paper['title'],
+                    'published': paper['published']
+                }
+                for category, data in analysis.items():
+                    result[f"{category}_confidence"] = data['confidence']
+                    result[f"{category}_issues"] = data['issues']
+                results.append(result)
+                
+                # Update progress
+                progress = (i + 1) / total_papers
+                st.progress(progress, text=f"Analyzing paper {i + 1}/{total_papers}")
+                
+                # Add small delay between API calls to avoid rate limiting
+                time.sleep(0.5)
+                
+            except Exception as e:
+                print(f"Error analyzing paper {paper['title']}: {str(e)}")
+                # Use fallback analysis for failed papers
+                fallback = self._generate_fallback_analysis()
+                result = {
+                    'title': paper['title'],
+                    'published': paper['published']
+                }
+                for category, data in fallback.items():
+                    result[f"{category}_confidence"] = data['confidence']
+                    result[f"{category}_issues"] = data['issues']
+                results.append(result)
         
         return pd.DataFrame(results)
 

@@ -11,9 +11,12 @@ class PaperFetcher:
     def fetch_papers(self, count: int = 1000, topic: str = None) -> List[Dict]:
         """Fetch papers from arXiv based on topic or randomly if no topic provided."""
         papers = []
-        batch_size = 50  # Smaller batch size for better reliability
+        batch_size = 25  # Smaller batch size to avoid rate limits
         max_retries = 3
         categories = ["cs", "physics", "math"]
+        retry_delay = 2  # Initial delay between retries in seconds
+        
+        st.progress(0.0, text="Initializing paper fetch...")
         
         while len(papers) < count and max_retries > 0:
             try:
@@ -27,7 +30,7 @@ class PaperFetcher:
                 
                 search = arxiv.Search(
                     query=query,
-                    max_results=batch_size,
+                    max_results=min(batch_size, count - len(papers)),
                     sort_by=arxiv.SortCriterion.Relevance if topic else arxiv.SortCriterion.SubmittedDate
                 )
                 
@@ -41,12 +44,18 @@ class PaperFetcher:
                         'url': result.pdf_url,
                         'categories': result.categories
                     })
-                
+                    
                 papers.extend(batch_papers)
+                progress = len(papers) / count
+                st.progress(progress, text=f"Fetched {len(papers)}/{count} papers...")
+                
                 if topic:
                     print(f"Successfully fetched {len(batch_papers)} papers for topic: {topic}")
                 else:
                     print(f"Successfully fetched {len(batch_papers)} papers from category: {query}")
+                    
+                # Add delay between batches to avoid rate limiting
+                time.sleep(1)
                 
             except Exception as e:
                 print(f"Error fetching papers: {str(e)}")
