@@ -174,7 +174,12 @@ if analyze_button:
     # Prepare display dataframe
     display_df = analysis_results.copy()
     # Add paper URLs to display dataframe
-    display_df['url'] = papers_df['url']
+    display_df['url'] = papers_df['url'].apply(lambda x: x if isinstance(x, str) else '')
+    
+    # Ensure URLs are valid
+    display_df['url'] = display_df['url'].apply(
+        lambda x: x if x.startswith('http') else f'https://arxiv.org/abs/{x.split("/")[-1]}' if x else ''
+    )
     
     # Configure columns for better display
     column_config = {
@@ -218,7 +223,7 @@ if analyze_button:
     st.info("Click on a paper in the table below to see detailed error analysis")
 
     # Display the dataframe with configured columns and handle selection
-    edited_df = st.data_editor(
+    selection = st.data_editor(
         display_df,
         use_container_width=True,
         column_config=column_config,
@@ -228,12 +233,12 @@ if analyze_button:
         disabled=True,
         column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url"]],
         height=400,
+        on_change=lambda: None,  # Add empty on_change to enable selection
     )
 
-    # Handle paper selection using click events
-    selected_rows = st.session_state.paper_analysis_table.get("selected_rows", [])
-    if selected_rows:
-        selected_index = selected_rows[0]
+    # Handle paper selection using selected_rows
+    if st.session_state.paper_analysis_table["selected_rows"]:
+        selected_index = st.session_state.paper_analysis_table["selected_rows"][0]
         selected_paper_title = display_df.iloc[selected_index]["title"]
         selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
         
