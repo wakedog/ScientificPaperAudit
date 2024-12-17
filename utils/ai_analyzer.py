@@ -49,17 +49,17 @@ class PaperAnalyzer:
         """
         
         try:
-            response = pplx.ChatCompletion.create(
+            response = pplx.Completion.create(
                 model="pplx-70b-online",
-                messages=[{"role": "user", "content": prompt}],
+                prompt=prompt,
+                max_tokens=1000,
                 temperature=0.7,
-                max_tokens=1000
             )
             
             # Parse the response to extract analysis
             import json
             try:
-                analysis_text = response.choices[0].message.content
+                analysis_text = response.choices[0].text
                 # Extract the JSON part from the response
                 start_idx = analysis_text.find('{')
                 end_idx = analysis_text.rfind('}') + 1
