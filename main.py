@@ -191,9 +191,10 @@ if analyze_button:
         "url": st.column_config.LinkColumn(
             "Paper Link",
             help="Click to view the original paper",
-            display_text="View Paper",
-            width="medium",
-            required=True
+            validate="^https?://.*",
+            max_chars=200,
+            display_text="View Paper ↗",
+            width="small"
         )
     }
     
@@ -226,17 +227,20 @@ if analyze_button:
         key="paper_analysis_table",
         disabled=False,
         column_order=["title", "published", "url"] + [col for col in display_df.columns if col not in ["title", "published", "url"]],
-        on_change=None,
-        height=400
+        height=400,
+        selection_mode="single"
     )
-    
+
     # Handle paper selection
-    if selection is not None and len(selection) > 0:
-        selected_paper_title = selection.iloc[0]["title"]
-        selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
-        
-        if selected_paper:
-            st.session_state.selected_paper_index = papers.index(selected_paper)
+    if selection:
+        selected_indices = selection
+        if len(selected_indices) > 0:
+            selected_index = list(selected_indices)[0]
+            selected_paper_title = display_df.iloc[selected_index]["title"]
+            selected_paper = next((p for p in papers if p['title'] == selected_paper_title), None)
+            
+            if selected_paper:
+                st.session_state.selected_paper_index = papers.index(selected_paper)
     
     # Display detailed error analysis for selected paper
     if st.session_state.selected_paper_index is not None:
