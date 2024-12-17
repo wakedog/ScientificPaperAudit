@@ -339,19 +339,45 @@ class Visualizer:
         
     def create_topic_distribution(self, df: pd.DataFrame) -> go.Figure:
         """Create topic distribution visualization using categories."""
-        # Extract categories and count papers per category
-        categories = []
-        for cats in df['categories']:
-            categories.extend(cats)
-        category_counts = pd.Series(categories).value_counts()
-        
-        # Create sunburst chart
-        fig = go.Figure(go.Sunburst(
-            labels=category_counts.index,
-            parents=[""] * len(category_counts),
-            values=category_counts.values,
-            branchvalues="total",
-        ))
+        try:
+            if 'categories' not in df.columns:
+                # Create a basic figure with a message when no categories are available
+                fig = go.Figure()
+                fig.add_annotation(
+                    text="No category data available",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=20)
+                )
+                return fig
+
+            # Extract categories and count papers per category
+            categories = []
+            for cats in df['categories'].fillna([]):
+                if isinstance(cats, (list, tuple)):
+                    categories.extend(cats)
+                elif isinstance(cats, str):
+                    categories.append(cats)
+                    
+            if not categories:
+                fig = go.Figure()
+                fig.add_annotation(
+                    text="No categories found in the data",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=20)
+                )
+                return fig
+                
+            category_counts = pd.Series(categories).value_counts()
+            
+            # Create sunburst chart
+            fig = go.Figure(go.Sunburst(
+                labels=category_counts.index,
+                parents=[""] * len(category_counts),
+                values=category_counts.values,
+                branchvalues="total",
+            ))
         
         fig.update_layout(
             title={

@@ -54,7 +54,9 @@ if analyze_button:
         
     with st.spinner("Analyzing papers..."):
         analysis_results = analyzer.analyze_batch(papers)
-        
+        # Add categories from original papers dataframe
+        analysis_results['categories'] = papers_df['categories']
+            
     # Filter data based on user selections
     filtered_results = analysis_results.copy()
     
