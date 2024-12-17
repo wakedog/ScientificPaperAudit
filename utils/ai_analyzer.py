@@ -2,7 +2,7 @@ import os
 import json
 from typing import List, Dict
 import pandas as pd
-from pplx import Client
+import pplx
 
 class PaperAnalyzer:
     def __init__(self):
@@ -13,7 +13,6 @@ class PaperAnalyzer:
             "Citation Issues",
             "Technical Accuracy"
         ]
-        self.client = Client(api_key=os.getenv('PPLX_API_KEY'))
         
     def analyze_paper(self, paper: Dict) -> Dict:
         """Analyze a single paper for potential issues."""
@@ -22,7 +21,8 @@ class PaperAnalyzer:
             prompt = self._generate_analysis_prompt(paper)
             
             # Make API call to Perplexity
-            response = self.client.chat.completions.create(
+            response = pplx.chat(
+                api_key=os.getenv('PPLX_API_KEY'),
                 model="pplx-70b-online",
                 messages=[{
                     "role": "system",
@@ -30,12 +30,11 @@ class PaperAnalyzer:
                 }, {
                     "role": "user",
                     "content": prompt
-                }],
-                temperature=0.7
+                }]
             )
             
             # Parse the response
-            return self._parse_analysis_response(response.choices[0].message.content)
+            return self._parse_analysis_response(response['choices'][0]['message']['content'])
             
         except Exception as e:
             print(f"Error calling Perplexity API: {e}")
@@ -65,13 +64,13 @@ class PaperAnalyzer:
         3. Brief description of main concerns
         
         Format your response as a JSON object with this structure for each category:
-        {
-            "category_name": {
+        {{
+            "category_name": {{
                 "confidence": score,
                 "issues": count,
                 "concerns": ["concern1", "concern2"]
-            }
-        }
+            }}
+        }}
         """
         
     def _parse_analysis_response(self, response_text: str) -> Dict:
@@ -97,6 +96,33 @@ class PaperAnalyzer:
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Error parsing API response: {e}")
             return self._generate_fallback_analysis()
+
+    def _generate_fallback_analysis(self) -> Dict:
+        """Generate fallback analysis when API call fails."""
+        import random
+        return {
+            category: {
+                'confidence': random.randint(60, 100),
+                'issues': random.randint(0, 3)
+            }
+            for category in self.error_categories
+        }
+
+    def analyze_batch(self, papers: List[Dict]) -> pd.DataFrame:
+        """Analyze a batch of papers."""
+        results = []
+        for paper in papers:
+            analysis = self.analyze_paper(paper)
+            result = {
+                'title': paper['title'],
+                'published': paper['published']
+            }
+            for category, data in analysis.items():
+                result[f"{category}_confidence"] = data['confidence']
+                result[f"{category}_issues"] = data['issues']
+            results.append(result)
+        
+        return pd.DataFrame(results)
 
     def aggregate_patterns(self, results: pd.DataFrame) -> Dict:
         """Aggregate and analyze error patterns across papers."""
@@ -124,30 +150,3 @@ class PaperAnalyzer:
             }
         
         return pattern_stats
-            
-    def _generate_fallback_analysis(self) -> Dict:
-        """Generate fallback analysis when API call fails."""
-        import random
-        return {
-            category: {
-                'confidence': random.randint(60, 100),
-                'issues': random.randint(0, 3)
-            }
-            for category in self.error_categories
-        }
-
-    def analyze_batch(self, papers: List[Dict]) -> pd.DataFrame:
-        """Analyze a batch of papers."""
-        results = []
-        for paper in papers:
-            analysis = self.analyze_paper(paper)
-            result = {
-                'title': paper['title'],
-                'published': paper['published']
-            }
-            for category, data in analysis.items():
-                result[f"{category}_confidence"] = data['confidence']
-                result[f"{category}_issues"] = len(data['issues']) # Changed to reflect number of issues
-            results.append(result)
-        
-        return pd.DataFrame(results)
