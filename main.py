@@ -112,6 +112,8 @@ if analyze_button:
     
     # Prepare display dataframe
     display_df = analysis_results.copy()
+    # Add paper URLs to display dataframe
+    display_df['url'] = papers_df['url']
     
     # Configure columns for better display
     column_config = {
