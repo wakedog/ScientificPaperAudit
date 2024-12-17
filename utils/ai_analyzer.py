@@ -26,39 +26,63 @@ class PaperAnalyzer:
             # Make API call to Perplexity
             headers = {
                 "Authorization": f"Bearer {os.getenv('PPLX_API_KEY')}",
+                "Accept": "application/json",
                 "Content-Type": "application/json"
             }
             
             payload = {
-                "model": "mistral-7b-instruct",
+                "model": "mixtral-8x7b-instruct",  # Updated to a more capable model
                 "messages": [{
                     "role": "system",
-                    "content": "You are an expert scientific paper analyzer. Analyze the paper for potential issues and provide structured feedback."
+                    "content": """You are an expert scientific paper analyzer. Analyze papers for potential issues and provide structured feedback in JSON format.
+                    Focus on methodology, statistical analysis, data integrity, citations, and technical accuracy."""
                 }, {
                     "role": "user",
                     "content": prompt
-                }]
+                }],
+                "max_tokens": 1024,
+                "temperature": 0.7,
+                "top_p": 0.9
             }
             
-            # Add retry mechanism
-            max_retries = 3
+            # Enhanced retry mechanism with exponential backoff
+            max_retries = 5
             retry_delay = 1
+            response_data = None
             
             for attempt in range(max_retries):
                 try:
+                    # Add rate limiting delay
+                    if attempt > 0:
+                        time.sleep(retry_delay)
+                    
                     response = requests.post(
                         "https://api.perplexity.ai/chat/completions",
                         headers=headers,
-                        json=payload
+                        json=payload,
+                        timeout=30  # Add timeout
                     )
+                    
+                    if response.status_code == 429:  # Rate limit hit
+                        retry_delay = min(retry_delay * 2, 32)  # Cap at 32 seconds
+                        continue
+                        
                     response.raise_for_status()
                     response_data = response.json()
                     break
-                except Exception as e:
+                    
+                except requests.exceptions.Timeout:
+                    print(f"Timeout on attempt {attempt + 1}")
+                    retry_delay = min(retry_delay * 2, 32)
+                    
+                except requests.exceptions.RequestException as e:
+                    print(f"API error on attempt {attempt + 1}: {str(e)}")
                     if attempt == max_retries - 1:
                         raise e
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
+                    retry_delay = min(retry_delay * 2, 32)
+            
+            if response_data is None:
+                raise Exception("Failed to get valid response after all retries")
             
             # Parse the response
             if 'choices' in response_data and response_data['choices']:
@@ -72,36 +96,45 @@ class PaperAnalyzer:
 
     def _generate_analysis_prompt(self, paper: Dict) -> str:
         """Generate detailed analysis prompt for the paper."""
-        return f"""
-        Please analyze this scientific paper for potential issues and provide a structured analysis:
-        
-        PAPER DETAILS:
-        Title: {paper['title']}
-        Abstract: {paper['abstract']}
-        Authors: {paper['authors']}
-        Published: {paper['published']}
-        
-        For each of the following categories:
-        - Methodology
-        - Statistical Analysis
-        - Data Integrity
-        - Citation Issues
-        - Technical Accuracy
-        
-        Provide:
-        1. A confidence score (0-100)
-        2. Number of potential issues identified
-        3. Brief description of main concerns
-        
-        Format your response as a JSON object with this structure for each category:
-        {{
-            "category_name": {{
-                "confidence": score,
-                "issues": count,
-                "concerns": ["concern1", "concern2"]
-            }}
-        }}
-        """
+        return f"""Analyze this scientific paper and provide a structured assessment focusing on potential issues and quality metrics.
+
+INPUT PAPER:
+Title: {paper['title']}
+Abstract: {paper['abstract']}
+Authors: {paper['authors']}
+Published: {paper['published']}
+
+REQUIRED OUTPUT FORMAT:
+Provide a JSON object with the following structure for each category (methodology, statistical_analysis, data_integrity, citation_issues, technical_accuracy):
+
+{{
+    "methodology": {{
+        "confidence": <0-100 score>,
+        "issues": <number of issues>,
+        "severity": <"low"|"medium"|"high">,
+        "key_points": [<list of main points>]
+    }},
+    "statistical_analysis": {{ ... }},
+    "data_integrity": {{ ... }},
+    "citation_issues": {{ ... }},
+    "technical_accuracy": {{ ... }}
+}}
+
+ANALYSIS GUIDELINES:
+- Confidence: Assess how confident you are in detecting issues (0-100)
+- Issues: Count specific problems found (integer)
+- Severity: Rate overall severity based on impact
+- Key Points: List 2-3 most important observations
+
+Focus on:
+1. Methodology: Research design, approach validity, controls
+2. Statistical Analysis: Data analysis methods, significance, interpretations
+3. Data Integrity: Data collection, handling, presentation
+4. Citation Issues: Reference completeness, accuracy, relevance
+5. Technical Accuracy: Domain-specific correctness, terminology
+
+Return ONLY the JSON object, no additional text.
+"""
         
     def _parse_analysis_response(self, response_text: str) -> Dict:
         """Parse API response into structured analysis."""
